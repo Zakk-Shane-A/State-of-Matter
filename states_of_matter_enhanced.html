@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚛️ States of Matter</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --solid: #a8d8f0;
+    --liquid: #4fa3d1;
+    --gas: #c9e8ff;
+    --fire: #ff6b35;
+    --cold: #89d4f5;
+    --bg: #060d1a;
+    --panel: rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.08);
+    --text: #e8f4fd;
+    --muted: rgba(232,244,253,0.45);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Starfield bg */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 10%, rgba(100,180,255,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 80% 80%, rgba(60,100,200,0.06) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .stars {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .star {
+    position: absolute;
+    border-radius: 50%;
+    background: white;
+    opacity: 0;
+    animation: twinkle var(--d) var(--delay) infinite;
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0; }
+    50% { opacity: var(--op); }
+  }
+
+  header {
+    text-align: center;
+    padding: 3rem 1rem 1.5rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .title-badge {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--cold);
+    border: 1px solid rgba(137,212,245,0.3);
+    padding: 0.3rem 1rem;
+    border-radius: 100px;
+    margin-bottom: 1rem;
+  }
+
+  h1 {
+    font-size: clamp(2rem, 6vw, 3.8rem);
+    font-weight: 800;
+    line-height: 1.05;
+    background: linear-gradient(135deg, #fff 0%, #89d4f5 50%, #4fa3d1 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.6rem;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 1rem;
+    font-weight: 400;
+  }
+
+  /* Phase Diagram */
+  .phase-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 2rem 1rem;
+    position: relative;
+    z-index: 1;
+    flex-wrap: wrap;
+  }
+
+  .phase-node {
+    position: relative;
+    cursor: pointer;
+    outline: none;
+    background: none;
+    border: none;
+    padding: 0;
+  }
+
+  .phase-circle {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--border);
+    background: var(--panel);
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .phase-circle::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+
+  .phase-node[data-state="solid"] .phase-circle::before {
+    background: radial-gradient(circle, rgba(168,216,240,0.3), transparent 70%);
+  }
+  .phase-node[data-state="liquid"] .phase-circle::before {
+    background: radial-gradient(circle, rgba(79,163,209,0.3), transparent 70%);
+  }
+  .phase-node[data-state="gas"] .phase-circle::before {
+    background: radial-gradient(circle, rgba(201,232,255,0.2), transparent 70%);
+  }
+
+  .phase-node.active .phase-circle,
+  .phase-node:hover .phase-circle {
+    transform: scale(1.12);
+    border-color: rgba(137,212,245,0.5);
+    box-shadow: 0 0 30px rgba(137,212,245,0.25), 0 0 60px rgba(137,212,245,0.1);
+  }
+
+  .phase-node.active .phase-circle::before,
+  .phase-node:hover .phase-circle::before {
+    opacity: 1;
+  }
+
+  .phase-emoji { font-size: 2rem; line-height: 1; }
+  .phase-label {
+    font-size: 0.7rem;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 0.3rem;
+    transition: color 0.3s;
+  }
+  .phase-node.active .phase-label,
+  .phase-node:hover .phase-label { color: var(--cold); }
+
+  /* Transition arrows */
+  .transitions-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 0.5rem;
+    align-items: center;
+  }
+
+  .trans-btn {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 0.3rem 0.8rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.3s;
+    white-space: nowrap;
+  }
+  .trans-btn:hover {
+    background: rgba(137,212,245,0.1);
+    border-color: rgba(137,212,245,0.4);
+    color: var(--cold);
+  }
+
+  /* Main content */
+  .content-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 1.5rem 3rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  @media (max-width: 640px) {
+    .content-grid { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.4s;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(137,212,245,0.4), transparent);
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+
+  .panel:hover::before { opacity: 1; }
+  .panel:hover { border-color: rgba(137,212,245,0.2); }
+
+  .panel-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--cold);
+    margin-bottom: 1rem;
+    opacity: 0.8;
+  }
+
+  .state-description {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+
+  .state-name {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Particle canvas */
+  canvas {
+    width: 100%;
+    height: 220px;
+    border-radius: 12px;
+    background: rgba(0,0,0,0.3);
+    display: block;
+  }
+
+  /* Properties */
+  .props-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8rem;
+    margin-top: 1rem;
+  }
+
+  .prop-item {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.8rem;
+  }
+
+  .prop-key {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.3rem;
+  }
+
+  .prop-val {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* Temp slider */
+  .temp-section {
+    grid-column: 1 / -1;
+    padding: 1.5rem;
+  }
+
+  .temp-display {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .temp-val {
+    font-size: 3rem;
+    font-weight: 800;
+    font-family: 'Space Mono', monospace;
+    line-height: 1;
+    transition: color 0.5s;
+  }
+
+  .temp-unit {
+    font-size: 1rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #89d4f5 var(--pct, 50%), rgba(255,255,255,0.1) var(--pct, 50%));
+    outline: none;
+    cursor: pointer;
+    margin: 1rem 0;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 0 10px rgba(137,212,245,0.6);
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+
+  input[type=range]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+  }
+
+  .temp-labels {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+
+  .current-state-banner {
+    text-align: center;
+    padding: 0.8rem;
+    background: rgba(137,212,245,0.05);
+    border: 1px solid rgba(137,212,245,0.15);
+    border-radius: 12px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    color: var(--cold);
+    margin-top: 0.8rem;
+    transition: all 0.5s;
+  }
+
+  footer {
+    text-align: center;
+    padding: 2rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.2);
+    letter-spacing: 0.1em;
+    position: relative;
+    z-index: 1;
+  }
+
+  .fade-in {
+    animation: fadeIn 0.5s ease forwards;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<header>
+  <div class="title-badge">⚛ Interactive Physics</div>
+  <h1>States of Matter</h1>
+  <p class="subtitle">Ice ❄️ → Water 💧 → Steam ☁️ — watch the phases transform</p>
+</header>
+
+<!-- Phase Diagram -->
+<div class="phase-diagram">
+  <button class="phase-node active" data-state="solid" onclick="selectState('solid')">
+    <div class="phase-circle">
+      <span class="phase-emoji">❄️</span>
+      <span class="phase-label">Solid</span>
+    </div>
+  </button>
+
+  <div class="transitions-group">
+    <button class="trans-btn" onclick="selectTransition('melting')">🔥 Melting →</button>
+    <button class="trans-btn" onclick="selectTransition('freezing')">❄️ ← Freezing</button>
+  </div>
+
+  <button class="phase-node" data-state="liquid" onclick="selectState('liquid')">
+    <div class="phase-circle">
+      <span class="phase-emoji">💧</span>
+      <span class="phase-label">Liquid</span>
+    </div>
+  </button>
+
+  <div class="transitions-group">
+    <button class="trans-btn" onclick="selectTransition('evaporation')">🌡️ Evaporation →</button>
+    <button class="trans-btn" onclick="selectTransition('condensation')">💧 ← Condensation</button>
+  </div>
+
+  <button class="phase-node" data-state="gas" onclick="selectState('gas')">
+    <div class="phase-circle">
+      <span class="phase-emoji">☁️</span>
+      <span class="phase-label">Gas</span>
+    </div>
+  </button>
+
+  <div class="transitions-group">
+    <button class="trans-btn" onclick="selectTransition('sublimation')">⬆️ Sublimation</button>
+    <button class="trans-btn" onclick="selectTransition('deposition')">⬇️ Deposition</button>
+  </div>
+</div>
+
+<!-- Content -->
+<div class="content-grid">
+
+  <!-- Left: Description + Props -->
+  <div class="panel" id="desc-panel">
+    <div class="panel-title">Current State</div>
+    <div class="state-name" id="state-name">❄️ Solid (Ice)</div>
+    <p class="state-description" id="state-desc">Particles are tightly packed in a rigid crystalline lattice. They vibrate in place but cannot move freely — giving ice its definite shape and volume.</p>
+    <div class="props-grid" id="props-grid">
+      <div class="prop-item"><div class="prop-key">Shape</div><div class="prop-val" id="prop-shape">Definite</div></div>
+      <div class="prop-item"><div class="prop-key">Volume</div><div class="prop-val" id="prop-volume">Definite</div></div>
+      <div class="prop-item"><div class="prop-key">Energy</div><div class="prop-val" id="prop-energy">Low</div></div>
+      <div class="prop-item"><div class="prop-key">Motion</div><div class="prop-val" id="prop-motion">Vibrate</div></div>
+    </div>
+  </div>
+
+  <!-- Right: Particle canvas -->
+  <div class="panel">
+    <div class="panel-title">Molecular View</div>
+    <canvas id="particle-canvas"></canvas>
+  </div>
+
+  <!-- Temperature slider (full width) -->
+  <div class="panel temp-section">
+    <div class="panel-title">Temperature Control</div>
+    <div class="temp-display">
+      <span class="temp-val" id="temp-val">−10</span>
+      <span class="temp-unit">°C</span>
+    </div>
+    <input type="range" id="temp-slider" min="-50" max="150" value="-10" oninput="onTempChange(this.value)">
+    <div class="temp-labels">
+      <span>−50°C (Deep Freeze)</span>
+      <span>0°C (Melting)</span>
+      <span>100°C (Boiling)</span>
+      <span>150°C (Steam)</span>
+    </div>
+    <div class="current-state-banner" id="state-banner">❄️ Water is in SOLID state (Ice)</div>
+  </div>
+
+</div>
+
+<footer>© 2026 States of Matter — Interactive Physics Guide</footer>
+
+<script>
+// Stars
+const starsEl = document.getElementById('stars');
+for (let i = 0; i < 80; i++) {
+  const s = document.createElement('div');
+  s.className = 'star';
+  const size = Math.random() * 2 + 1;
+  s.style.cssText = `width:${size}px;height:${size}px;top:${Math.random()*100}%;left:${Math.random()*100}%;--d:${3+Math.random()*5}s;--delay:${Math.random()*5}s;--op:${0.2+Math.random()*0.5}`;
+  starsEl.appendChild(s);
+}
+
+// State data
+const states = {
+  solid: {
+    name: '❄️ Solid (Ice)',
+    desc: 'Particles are tightly packed in a rigid crystalline lattice. They vibrate in place but cannot move freely — giving ice its definite shape and volume.',
+    shape: 'Definite', volume: 'Definite', energy: 'Low', motion: 'Vibrate',
+    tempRange: [-50, 0],
+    color: '#89d4f5',
+    particleColor: '#89d4f5',
+    spacing: 'tight', speed: 0.3
+  },
+  liquid: {
+    name: '💧 Liquid (Water)',
+    desc: 'Particles have enough energy to flow past each other. Water takes the shape of its container but maintains a definite volume. Hydrogen bonds constantly form and break.',
+    shape: 'Indefinite', volume: 'Definite', energy: 'Medium', motion: 'Flow',
+    tempRange: [0, 100],
+    color: '#4fa3d1',
+    particleColor: '#4fa3d1',
+    spacing: 'medium', speed: 1.2
+  },
+  gas: {
+    name: '☁️ Gas (Steam)',
+    desc: 'Particles move rapidly in all directions with minimal interaction. Steam fills any container completely — no definite shape or volume. Molecular chaos at its finest.',
+    shape: 'Indefinite', volume: 'Indefinite', energy: 'High', motion: 'Rapid',
+    tempRange: [100, 150],
+    color: '#c9e8ff',
+    particleColor: 'rgba(201,232,255,0.7)',
+    spacing: 'loose', speed: 3
+  }
+};
+
+const transitions = {
+  melting: { name: '🔥 Melting', desc: 'Heat energy breaks the rigid crystal bonds of ice. At 0°C, molecules gain enough energy to slide past each other, transitioning from solid to liquid.' },
+  freezing: { name: '❄️ Freezing', desc: 'As liquid water loses heat, molecules slow down and form hydrogen bonds in a crystalline pattern, transitioning from liquid to solid ice.' },
+  evaporation: { name: '🌡️ Evaporation', desc: 'At the surface, water molecules with enough kinetic energy escape into the air. At 100°C, this happens throughout the liquid — called boiling.' },
+  condensation: { name: '💧 Condensation', desc: 'Water vapor cools and loses energy. Molecules slow down and attract each other, forming liquid water — like droplets on a cold glass.' },
+  sublimation: { name: '⬆️ Sublimation', desc: 'Under the right conditions (low pressure), ice can transform directly into vapor without passing through liquid. Dry ice is a classic example.' },
+  deposition: { name: '⬇️ Deposition', desc: 'Water vapor transitions directly into ice, skipping the liquid phase. This creates beautiful frost crystals on cold surfaces.' }
+};
+
+let currentState = 'solid';
+let particles = [];
+let animFrame;
+const canvas = document.getElementById('particle-canvas');
+const ctx = canvas.getContext('2d');
+
+function resizeCanvas() {
+  canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+  canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  initParticles();
+}
+
+function initParticles() {
+  const w = canvas.offsetWidth, h = canvas.offsetHeight;
+  particles = [];
+  const st = states[currentState];
+  let count, radiusBase, spacing;
+
+  if (st.spacing === 'tight') { count = 36; radiusBase = 7; spacing = 28; }
+  else if (st.spacing === 'medium') { count = 30; radiusBase = 6; spacing = 30; }
+  else { count = 22; radiusBase = 5; spacing = 40; }
+
+  for (let i = 0; i < count; i++) {
+    let x, y;
+    if (st.spacing === 'tight') {
+      const cols = 6;
+      const row = Math.floor(i / cols);
+      const col = i % cols;
+      x = 30 + col * spacing + (row % 2 === 1 ? 14 : 0);
+      y = 30 + row * (spacing * 0.87);
+    } else {
+      x = radiusBase + Math.random() * (w - radiusBase * 2);
+      y = radiusBase + Math.random() * (h - radiusBase * 2);
+    }
+
+    const speed = st.speed;
+    const angle = Math.random() * Math.PI * 2;
+    particles.push({
+      x, y,
+      homeX: x, homeY: y,
+      vx: Math.cos(angle) * speed * (0.5 + Math.random()),
+      vy: Math.sin(angle) * speed * (0.5 + Math.random()),
+      r: radiusBase * (0.8 + Math.random() * 0.4),
+      opacity: 0.7 + Math.random() * 0.3,
+      phase: Math.random() * Math.PI * 2
+    });
+  }
+}
+
+function drawParticles() {
+  const w = canvas.offsetWidth, h = canvas.offsetHeight;
+  ctx.clearRect(0, 0, w, h);
+
+  const st = states[currentState];
+  const t = Date.now() / 1000;
+
+  // Draw bonds for solid
+  if (currentState === 'solid') {
+    ctx.strokeStyle = 'rgba(137,212,245,0.15)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 35) {
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  for (const p of particles) {
+    if (currentState === 'solid') {
+      // Vibrate around home
+      p.x = p.homeX + Math.sin(t * 8 + p.phase) * 1.5;
+      p.y = p.homeY + Math.cos(t * 7 + p.phase) * 1.5;
+    } else if (currentState === 'liquid') {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < p.r || p.x > w - p.r) p.vx *= -1;
+      if (p.y < p.r || p.y > h - p.r) p.vy *= -1;
+      // Cohesion: slow drift toward center
+      p.vx += (w/2 - p.x) * 0.0001;
+      p.vy += (h/2 - p.y) * 0.0001;
+    } else {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < p.r || p.x > w - p.r) p.vx *= -1;
+      if (p.y < p.r || p.y > h - p.r) p.vy *= -1;
+    }
+
+    // Glow
+    const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 2.5);
+    grad.addColorStop(0, currentState === 'solid' ? 'rgba(200,240,255,0.9)' : currentState === 'liquid' ? 'rgba(79,163,209,0.9)' : 'rgba(201,232,255,0.7)');
+    grad.addColorStop(0.5, currentState === 'solid' ? 'rgba(137,212,245,0.4)' : currentState === 'liquid' ? 'rgba(60,140,200,0.4)' : 'rgba(150,200,240,0.3)');
+    grad.addColorStop(1, 'transparent');
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = currentState === 'solid' ? 'rgba(220,245,255,0.95)' : currentState === 'liquid' ? 'rgba(100,180,230,0.9)' : 'rgba(200,230,250,0.7)';
+    ctx.fill();
+  }
+
+  animFrame = requestAnimationFrame(drawParticles);
+}
+
+function selectState(state) {
+  currentState = state;
+
+  // Update nodes
+  document.querySelectorAll('.phase-node').forEach(n => n.classList.toggle('active', n.dataset.state === state));
+
+  // Update description
+  const st = states[state];
+  document.getElementById('state-name').textContent = st.name;
+  document.getElementById('state-desc').textContent = st.desc;
+  document.getElementById('prop-shape').textContent = st.shape;
+  document.getElementById('prop-volume').textContent = st.volume;
+  document.getElementById('prop-energy').textContent = st.energy;
+  document.getElementById('prop-motion').textContent = st.motion;
+
+  // Update temp slider
+  const midTemp = (st.tempRange[0] + st.tempRange[1]) / 2;
+  const slider = document.getElementById('temp-slider');
+  slider.value = midTemp;
+  updateTempDisplay(midTemp, false);
+
+  document.getElementById('desc-panel').classList.remove('fade-in');
+  void document.getElementById('desc-panel').offsetWidth;
+  document.getElementById('desc-panel').classList.add('fade-in');
+
+  initParticles();
+}
+
+function selectTransition(trans) {
+  const t = transitions[trans];
+  document.getElementById('state-name').textContent = t.name;
+  document.getElementById('state-desc').textContent = t.desc;
+  document.getElementById('desc-panel').classList.remove('fade-in');
+  void document.getElementById('desc-panel').offsetWidth;
+  document.getElementById('desc-panel').classList.add('fade-in');
+}
+
+function onTempChange(val) {
+  val = parseFloat(val);
+  updateTempDisplay(val, true);
+  updateSliderFill(val);
+}
+
+function updateSliderFill(val) {
+  const slider = document.getElementById('temp-slider');
+  const pct = ((val - (-50)) / (150 - (-50))) * 100;
+  slider.style.setProperty('--pct', pct + '%');
+}
+
+function updateTempDisplay(temp, autoState) {
+  const el = document.getElementById('temp-val');
+  el.textContent = Math.round(temp);
+  el.style.color = temp < 0 ? '#89d4f5' : temp < 100 ? '#4fa3d1' : '#ff8c5a';
+
+  const banner = document.getElementById('state-banner');
+  if (temp < 0) {
+    banner.textContent = '❄️ Water is in SOLID state (Ice)';
+    banner.style.borderColor = 'rgba(137,212,245,0.3)';
+    if (autoState && currentState !== 'solid') selectState('solid');
+  } else if (temp < 100) {
+    banner.textContent = '💧 Water is in LIQUID state (Water)';
+    banner.style.borderColor = 'rgba(79,163,209,0.3)';
+    if (autoState && currentState !== 'liquid') selectState('liquid');
+  } else {
+    banner.textContent = '☁️ Water is in GAS state (Steam)';
+    banner.style.borderColor = 'rgba(201,232,255,0.2)';
+    if (autoState && currentState !== 'gas') selectState('gas');
+  }
+  updateSliderFill(temp);
+}
+
+// Init
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+updateTempDisplay(-10, false);
+drawParticles();
+</script>
+</body>
+</html>
